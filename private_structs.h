@@ -5,8 +5,8 @@
 
 #ifdef THREAD_COUNTER
 struct params_t {
-	pthread_mutex_t lock;
-	uint64_t counter;
+  pthread_mutex_t lock;
+  uint64_t counter;
 };
 #endif
 

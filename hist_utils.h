@@ -3,10 +3,9 @@
 
 #include <stdlib.h>
 
-struct histogram
-{
-	int val;
-	int count;
+struct histogram {
+  int val;
+  int count;
 };
 
 float hist_avg(struct histogram *hist, int len);

@@ -1,9 +1,9 @@
 #ifndef list_utils_H
 #define list_utils_H
 
-#include <stdlib.h>
 #include "cache.h"
 #include "micro.h"
+#include <stdlib.h>
 
 int list_length(Elem *ptr);
 Elem *list_pop(Elem **ptr);
@@ -18,11 +18,10 @@ void list_from_chunks(Elem **ptr, Elem **chunks, int avoid, int len);
 void list_set_id(Elem *ptr, int id);
 void print_list(Elem *ptr);
 
-//void initialize_random_list(Elem *ptr, ul offset, ul sz, Elem *base);
+// void initialize_random_list(Elem *ptr, ul offset, ul sz, Elem *base);
 void initialize_list(Elem *ptr, ul sz, ul offset);
 void pick_n_random_from_list(Elem *src, ul stride, ul sz, ul offset, ul n);
 void rearrange_list(Elem **ptr, ul stride, ul sz, ul offset);
 void generate_conflict_set(Elem **ptr, Elem **out);
 
 #endif /* list_utils_H */
-
