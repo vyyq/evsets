@@ -179,8 +179,8 @@ int find_evsets() {
   clock_t tts, tte;
   int rep = 0;
   tts = clock();
-pick:
 
+pick:
   ptr = (Elem *)&pool[conf.offset << 6];
   initialize_list(ptr, pool_sz, conf.offset);
 
@@ -229,6 +229,7 @@ pick:
       ret = tests_avg(ptr, victim, conf.rounds, conf.threshold, conf.traverse);
     }
   }
+
   if ((victim || conf.algorithm == ALGORITHM_LINEAR) && ret) {
     printf("[+] Initial candidate set evicted victim\n");
     // rep = 0;
@@ -252,10 +253,8 @@ pick:
   int id = num_evsets;
   // Iterate over all colors of conf.offset
   do {
-
     printf("[+] Created linked list structure (%d elements)\n",
            list_length(ptr));
-
     // Search
     switch (conf.algorithm) {
     case ALGORITHM_NAIVE:

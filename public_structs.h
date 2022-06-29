@@ -1,6 +1,8 @@
 #ifndef public_structs_H
 #define public_structs_H
 
+#include <stddef.h>
+
 #define ALGORITHM_NAIVE 0
 #define ALGORITHM_GROUP 1
 #define ALGORITHM_BINARY 2
@@ -37,7 +39,8 @@ typedef struct elem {
 
 struct config {
   int rounds, cal_rounds;
-  int stride;
+  int stride; // stride = 2^{γ+l}, where γ is the number of bits of set index
+              // contrallable from the user space.
   int cache_size;
   int buffer_size;
   int cache_way;
