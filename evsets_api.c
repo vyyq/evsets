@@ -254,7 +254,7 @@ pick:
 
   printf(SUCCESS_STATUS_PREFIX
          "Everything is fine so far. Press ANY key to start reducing...\n");
-  getchar();
+  // getchar();
 
   clock_t ts, te;
 

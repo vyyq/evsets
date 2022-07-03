@@ -168,7 +168,6 @@ int gt_eviction(Elem **ptr, Elem **can, char *victim) {
   }
 
   int repeat = 0; // # backtracking which has already been done.
-  int trial_times = 0;
   int retest_res;
 
   do {
@@ -189,7 +188,6 @@ int gt_eviction(Elem **ptr, Elem **can, char *victim) {
 
       do {
         list_from_chunks(ptr, chunks, chunk_idxs[n], conf.cache_way + 1);
-      try_reduction_once_more:
         n++;
         if (conf.ratio > 0.0) {
           sublist_can_evict_victim =
@@ -215,14 +213,7 @@ int gt_eviction(Elem **ptr, Elem **can, char *victim) {
                  level, evset_size, nr_removed_lines,
                  evset_size + nr_removed_lines);
         }
-
-        trial_times = 0;
         level++; // go to the next lvl
-      } else if (trial_times <= 2) {
-        trial_times++;
-        n = 0;
-        printf(QUESTION_STATUS_PREFIX "Try once more...\n");
-        goto try_reduction_once_more;
       } else if (level > 0) { // If not, recover to the last iteration
         list_concat(ptr, chunks[chunk_idxs[n - 1]]);
         level--;
