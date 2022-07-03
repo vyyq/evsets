@@ -4,7 +4,7 @@
 #include <stddef.h>
 
 #define ALGORITHM_NAIVE 0
-#define ALGORITHM_GROUP 1
+#define ALGORITHM_GROUP 1 // Group Elimination (GE) algorithm
 #define ALGORITHM_BINARY 2
 #define ALGORITHM_LINEAR 3
 #define ALGORITHM_NAIVE_OPTIMISTIC 4

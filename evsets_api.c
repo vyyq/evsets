@@ -21,7 +21,7 @@
 #include "micro.h"
 #include "utils.h"
 
-#define MAX_REPS 50
+#define MAX_REPS 5000
 
 struct config conf;
 
@@ -231,15 +231,19 @@ pick:
   }
 
   if ((victim || conf.algorithm == ALGORITHM_LINEAR) && ret) {
-    printf("[+] Initial candidate set evicted victim\n");
+    printf(SUCCESS_STATUS_PREFIX "Initial candidate set evicted victim\n");
     // rep = 0;
   } else {
-    printf("[!] Error: invalid candidate set\n");
+    printf(FATAL_STATUS_PREFIX "Error: invalid candidate set\n");
+    if (ret == 0) {
+      printf("     Reason: the large eviction set actually cannot evict "
+             "the victim. Please select a larger set (a larger -b)\n");
+    }
     if ((conf.flags & FLAG_RETRY) && rep < MAX_REPS) {
       rep++;
       goto pick;
     } else if (rep >= MAX_REPS) {
-      printf("[!] Error: exceeded max repetitions\n");
+      printf(FATAL_STATUS_PREFIX "Error: exceeded max repetitions\n");
     }
     if (conf.flags & FLAG_VERIFY) {
       recheck(ptr, victim, true, &conf);
@@ -253,36 +257,37 @@ pick:
   int id = num_evsets;
   // Iterate over all colors of conf.offset
   do {
-    printf("[+] Created linked list structure (%d elements)\n",
+    printf(SUCCESS_STATUS_PREFIX
+           "Created linked list structure (%d elements)\n",
            list_length(ptr));
     // Search
     switch (conf.algorithm) {
     case ALGORITHM_NAIVE:
-      printf("[+] Starting naive reduction...\n");
+      printf(SUCCESS_STATUS_PREFIX "Starting naive reduction...\n");
       ts = clock();
       ret = naive_eviction(&ptr, &can, victim);
       te = clock();
       break;
     case ALGORITHM_NAIVE_OPTIMISTIC:
-      printf("[+] Starting optimistic naive reduction...\n");
+      printf(SUCCESS_STATUS_PREFIX "Starting optimistic naive reduction...\n");
       ts = clock();
       ret = naive_eviction_optimistic(&ptr, &can, victim);
       te = clock();
       break;
     case ALGORITHM_GROUP:
-      printf("[+] Starting group reduction...\n");
+      printf(SUCCESS_STATUS_PREFIX "Starting group reduction...\n");
       ts = clock();
       ret = gt_eviction(&ptr, &can, victim);
       te = clock();
       break;
     case ALGORITHM_BINARY:
-      printf("[+] Starting binary group reduction...\n");
+      printf(SUCCESS_STATUS_PREFIX "Starting binary group reduction...\n");
       ts = clock();
       ret = binary_eviction(&ptr, &can, victim);
       te = clock();
       break;
     case ALGORITHM_LINEAR:
-      printf("[+] Starting linear reduction...\n");
+      printf(SUCCESS_STATUS_PREFIX "Starting linear reduction...\n");
       ts = clock();
       ret = gt_eviction_any(&ptr, &can);
       te = clock();
@@ -291,23 +296,27 @@ pick:
 
     tte = clock();
 
-    len = list_length(ptr);
+    len = list_length(ptr); // Update the length of the list
     if (ret) {
-      printf("[!] Error: optimal eviction set not found (length=%d)\n", len);
+      printf(FATAL_STATUS_PREFIX
+             "Error: optimal eviction set not found (length=%d)\n",
+             len);
     } else {
-      printf("[+] Reduction time: %f seconds\n",
+      printf(SUCCESS_STATUS_PREFIX "Reduction time: %f seconds\n",
              ((double)(te - ts)) / CLOCKS_PER_SEC);
-      printf("[+] Total execution time: %f seconds\n",
+      printf(SUCCESS_STATUS_PREFIX "Total execution time: %f seconds\n",
              ((double)(tte - tts)) / CLOCKS_PER_SEC);
 
       // Re-Check that it's an optimal eviction set
       if (conf.algorithm != ALGORITHM_LINEAR) {
-        printf("[+] (ID=%d) Found minimal eviction set for %p (length=%d): ",
+        printf(SUCCESS_STATUS_PREFIX
+               "(ID=%d) Found minimal eviction set for %p (length=%d): ",
                id, (void *)victim, len);
         print_list(ptr);
       } else {
-        printf("[+] (ID=%d) Found a minimal eviction set (length=%d): ", id,
-               len);
+        printf(SUCCESS_STATUS_PREFIX
+               "(ID=%d) Found a minimal eviction set (length=%d): ",
+               id, len);
         print_list(ptr);
       }
       evsets[id] = ptr;
@@ -326,16 +335,16 @@ pick:
         if (!(conf.flags & FLAG_CONFLICTSET) &&
             !(conf.flags & FLAG_FINDALLCOLORS)) {
           // select a new initial set
-          printf("[!] Error: repeat, pick a new set\n");
+          printf(FATAL_STATUS_PREFIX "Error: repeat, pick a new set\n");
           goto pick;
         } else {
           // reshuffle list or change victim?
-          printf("[!] Error: try new victim\n");
+          printf(FATAL_STATUS_PREFIX "Error: try new victim\n");
           goto next;
           // continue;
         }
       } else {
-        printf("[!] Error: exceeded max repetitions\n");
+        printf(FATAL_STATUS_PREFIX "Error: exceeded max repetitions\n");
       }
     } else if (!ret) {
       rep = 0;

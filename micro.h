@@ -46,6 +46,7 @@ inline uint64_t rdtscfence() {
   return ((d << 32) | a);
 }
 
+// Access memory location p.
 inline void maccess(void *p) {
   __asm__ volatile("movq (%0), %%rax\n" : : "c"(p) : "rax");
 }

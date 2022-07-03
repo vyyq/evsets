@@ -5,7 +5,7 @@
 #include <math.h>
 #include <stdio.h>
 
-#define MAX_REPS_BACK 100
+#define MAX_REPS_BACK 1000000
 
 extern struct config conf;
 
@@ -142,100 +142,113 @@ int gt_eviction(Elem **ptr, Elem **can, char *victim) {
   if (!chunks) {
     return 1;
   }
-  int *ichunks = (int *)calloc(conf.cache_way + 1, sizeof(int)), i;
-  if (!ichunks) {
+  int *chunk_idxs = (int *)calloc(conf.cache_way + 1, sizeof(int));
+  int i;
+  if (!chunk_idxs) {
     free(chunks);
     return 1;
   }
 
-  int len = list_length(*ptr), cans = 0;
+  // The size of the current eviction set
+  int evset_size = list_length(*ptr);
+  int nr_removed_lines = 0;
 
-  // Calculate length: h = log(a/(a+1), a/n)
-  double sz = (double)conf.cache_way / len;
+  double sz = (double)conf.cache_way / evset_size;
   double rate = (double)conf.cache_way / (conf.cache_way + 1);
-  int h = ceil(log(sz) / log(rate)), l = 0;
+  int h = ceil(log(sz) / log(rate)); // h = log(a/(a+1), a/n)
+  int level = 0;                     // Nr of iterations of reduction
 
   // Backtrack record
-  Elem **back =
+  Elem **backtrack_record =
       (Elem **)calloc(h * 2, sizeof(Elem *)); // TODO: check height bound
-  if (!back) {
+  if (backtrack_record == NULL) {
     free(chunks);
-    free(ichunks);
+    free(chunk_idxs);
     return 1;
   }
 
-  int repeat = 0;
+  int repeat = 0; // # backtracking which has already been done.
   do {
-
+    // Assign an index array and shuffle it
     for (i = 0; i < conf.cache_way + 1; i++) {
-      ichunks[i] = i;
+      chunk_idxs[i] = i;
     }
-    shuffle(ichunks, conf.cache_way + 1);
+    shuffle(chunk_idxs, conf.cache_way + 1);
 
     // Reduce
-    while (len > conf.cache_way) {
-
+    while (evset_size > conf.cache_way) {
       list_split(*ptr, chunks, conf.cache_way + 1);
-      int n = 0, ret = 0;
 
-      // Try paths
+      // The index of the chunk which is being tested now
+      int n = 0;
+      // bool: if the subset can evict the victim
+      int sublist_can_evict_victim = 0;
+
       do {
-        list_from_chunks(ptr, chunks, ichunks[n], conf.cache_way + 1);
-        n = n + 1;
+        list_from_chunks(ptr, chunks, chunk_idxs[n], conf.cache_way + 1);
+        n++;
         if (conf.ratio > 0.0) {
-          ret = tests(*ptr, victim, conf.rounds, conf.threshold, conf.ratio,
-                      conf.traverse);
+          sublist_can_evict_victim =
+              tests(*ptr, victim, conf.rounds, conf.threshold, conf.ratio,
+                    conf.traverse);
         } else {
-          ret = tests_avg(*ptr, victim, conf.rounds, conf.threshold,
-                          conf.traverse);
+          sublist_can_evict_victim = tests_avg(*ptr, victim, conf.rounds,
+                                               conf.threshold, conf.traverse);
         }
-      } while (!ret && (n < conf.cache_way + 1));
+      } while (sublist_can_evict_victim == 0 && (n < conf.cache_way + 1));
 
-      // If find smaller eviction set remove chunk
-      if (ret && n <= conf.cache_way) {
-        back[l] = chunks[ichunks[n - 1]]; // store ptr to discarded chunk
-        cans += list_length(back[l]);     // add length of removed chunk
-        len = list_length(*ptr);
+      // If a smaller eviction set is found, remove the chunk
+      if (sublist_can_evict_victim && n <= conf.cache_way) {
+        backtrack_record[level] = chunks[chunk_idxs[n - 1]];
+        nr_removed_lines += list_length(backtrack_record[level]);
+        evset_size = list_length(*ptr);
 
         if (conf.flags & FLAG_VERBOSE) {
-          printf("\tlvl=%d: eset=%d, removed=%d (%d)\n", l, len, cans,
-                 len + cans);
+          printf("\t" SUCCESS_STATUS_PREFIX
+                 "Successful reduction iteration: level = %d: evset size = %d, "
+                 "removed lines = "
+                 "%d, total lines = %d\n",
+                 level, evset_size, nr_removed_lines,
+                 evset_size + nr_removed_lines);
         }
 
-        l = l + 1; // go to next lvl
-      }
-      // Else, re-add last removed chunk and try again
-      else if (l > 0) {
-        list_concat(ptr, chunks[ichunks[n - 1]]); // recover last case
-        l = l - 1;
-        cans -= list_length(back[l]);
-        list_concat(ptr, back[l]);
-        back[l] = NULL;
-        len = list_length(*ptr);
-        goto mycont;
+        level++;              // go to the next lvl
+      } else if (level > 0) { // If not, recover to the last iteration
+        list_concat(ptr, chunks[chunk_idxs[n - 1]]);
+        level--;
+        nr_removed_lines -= list_length(backtrack_record[level]);
+        list_concat(ptr, backtrack_record[level]);
+        backtrack_record[level] = NULL;
+        evset_size = list_length(*ptr);
+        goto continue_backtracking;
       } else {
-        list_concat(ptr, chunks[ichunks[n - 1]]); // recover last case
-        break;
+        list_concat(ptr, chunks[chunk_idxs[n - 1]]); // recover
+        goto stop_reduction;
       }
-    }
+    } // while (evset_size > conf.cache_way)
 
-    break;
-  mycont:
+    goto stop_reduction;
+
+  continue_backtracking:
     if (conf.flags & FLAG_VERBOSE) {
-      printf("\tbacktracking step\n");
+      printf("\t" FAILURE_STATUS_PREFIX
+             "Reduction failed. Backtracking... (Backtracking has already be "
+             "performed %d times; max toleration = %d)\n",
+             repeat, MAX_REPS_BACK);
     }
 
-  } while (l > 0 && repeat++ < MAX_REPS_BACK &&
+  } while (level > 0 && repeat++ < MAX_REPS_BACK &&
            (conf.flags & FLAG_BACKTRACKING));
 
+ stop_reduction:
   // recover discarded elements
   for (i = 0; i < h * 2; i++) {
-    list_concat(can, back[i]);
+    list_concat(can, backtrack_record[i]);
   }
 
   free(chunks);
-  free(ichunks);
-  free(back);
+  free(chunk_idxs);
+  free(backtrack_record);
 
   int ret = 0;
   if (conf.ratio > 0.0) {
@@ -245,7 +258,7 @@ int gt_eviction(Elem **ptr, Elem **can, char *victim) {
     ret = tests_avg(*ptr, victim, conf.rounds, conf.threshold, conf.traverse);
   }
   if (ret) {
-    if (len > conf.cache_way) {
+    if (evset_size > conf.cache_way) {
       return 1;
     }
   } else {
@@ -308,8 +321,10 @@ int gt_eviction_any(Elem **ptr, Elem **can) {
         len = list_length(*ptr);
 
         if (conf.flags & FLAG_VERBOSE) {
-          printf("\tlvl=%d: eset=%d, removed=%d (%d)\n", l, len, cans,
-                 len + cans);
+          printf(
+              "\tLevel (iteration) = %d: evset size = %d, # removed lines = %d "
+              "(%d)\n",
+              l, len, cans, len + cans);
         }
 
         l = l + 1; // go to next lvl

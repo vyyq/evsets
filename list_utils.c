@@ -13,7 +13,7 @@ int list_length(Elem *ptr) {
   return l;
 }
 
-/* add element to the head of the list */
+// Add element to the head of the list
 void list_push(Elem **ptr, Elem *e) {
   if (!e) {
     return;
@@ -26,7 +26,7 @@ void list_push(Elem **ptr, Elem *e) {
   *ptr = e;
 }
 
-/* add element to the end of the list */
+// Add element to the end of the list
 void list_append(Elem **ptr, Elem *e) {
   Elem *tmp = *ptr;
   if (!e) {
@@ -44,7 +44,7 @@ void list_append(Elem **ptr, Elem *e) {
   e->next = NULL;
 }
 
-/* remove and return last element of list */
+// Remove and return last element of list
 Elem *list_shift(Elem **ptr) {
   Elem *tmp = (ptr) ? *ptr : NULL;
   if (!tmp) {
@@ -63,7 +63,7 @@ Elem *list_shift(Elem **ptr) {
   return tmp;
 }
 
-/* remove and return first element of list */
+// remove and return first element of list
 Elem *list_pop(Elem **ptr) {
   Elem *tmp = (ptr) ? *ptr : NULL;
   if (!tmp) {
@@ -78,6 +78,8 @@ Elem *list_pop(Elem **ptr) {
   return tmp;
 }
 
+// For a list [ptr], split it into [n] chunks and save the result in
+// [chunks]
 void list_split(Elem *ptr, Elem **chunks, int n) {
   if (!ptr) {
     return;
@@ -179,6 +181,8 @@ void list_concat(Elem **ptr, Elem *chunk) {
   }
 }
 
+// Given a list [ptr] separated into [len] [chunks], get a list
+// without the [avoid]th chunk
 void list_from_chunks(Elem **ptr, Elem **chunks, int avoid, int len) {
   int next = (avoid + 1) % len;
   if (!(*ptr) || !chunks || !chunks[next]) {

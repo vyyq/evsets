@@ -2,6 +2,7 @@
 #include "hist_utils.h"
 #include "micro.h"
 #include "public_structs.h"
+#include "utils.h"
 
 #ifdef THREAD_COUNTER
 #include <pthread.h>
@@ -148,15 +149,19 @@ inline void traverse_list_time(Elem *ptr, void (*trav)(Elem *)) {
   size_t time;
   trav(ptr);
   while (ptr) {
-    //		time = rdtsc();
+    // time = rdtsc();
     time = rdtscfence();
     maccess(ptr);
     ptr->delta += rdtscfence() - time;
-    //		ptr->delta += rdtscp() - time;
+    // ptr->delta += rdtscp() - time;
     ptr = ptr->next;
   }
 }
 
+// Let [victim] be accessed and loaded into cache first. Then return
+// the access latency of [victim] after the elements of the eviction
+// set [ptr] is accessed, which can indicate whether or not [victim]
+// is evicted by the eviction set [ptr].
 int test_set(Elem *ptr, char *victim, void (*trav)(Elem *)) {
   maccess(victim);
   maccess(victim);
@@ -204,9 +209,16 @@ int test_and_time(Elem *ptr, int rep, int threshold, int ways,
   return count > ways;
 }
 
+// Test if a list (eviction set) [ptr] can evict the victim with the
+// threshold [threshold] under the traverse method [trav] (repeat for
+// [rep] times and calculate the average time). If the list is an
+// eviction set, then the re-access time should be above the threshold
+// and this function returns 1; othrewise return 0.
 int tests_avg(Elem *ptr, char *victim, int rep, int threshold,
               void (*trav)(Elem *)) {
-  int i = 0, ret = 0, delta = 0;
+  int i = 0;
+  int ret = 0;
+  int delta = 0;
   Elem *vic = (Elem *)victim;
   vic->delta = 0;
   for (i = 0; i < rep; i++) {
@@ -215,7 +227,23 @@ int tests_avg(Elem *ptr, char *victim, int rep, int threshold,
       vic->delta += delta;
   }
   ret = (float)vic->delta / rep;
+#ifndef DEBUG
   return ret > threshold;
+#else
+  if (ret > threshold) {
+    printf("\t\t" SUCCESS_STATUS_PREFIX
+           "The victim is evicted (re-access latency = %d, "
+           "threshold = %d)\n",
+           ret, threshold);
+    return 1;
+  } else {
+    printf("\t\t" QUESTION_STATUS_PREFIX
+           "The victim is not evicted by the eviction set (re-access latency "
+           "= %d, threshold = %d)\n",
+           ret, threshold);
+    return 0;
+  }
+#endif
 }
 
 int tests(Elem *ptr, char *victim, int rep, int threshold, float ratio,

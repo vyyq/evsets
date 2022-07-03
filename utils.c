@@ -1,5 +1,6 @@
 #include "utils.h"
 
+// Shuffle an [array] of size [n]
 void shuffle(int *array, size_t n) {
   size_t i;
   if (n > 1) {

@@ -1,5 +1,6 @@
 #include "micro.h"
 #include "cache.h"
+#include "utils.h"
 
 #include <fcntl.h>
 #include <unistd.h>
@@ -73,11 +74,11 @@ void recheck(Elem *ptr, char *victim, bool err, struct config *conf) {
     vslice = ptos(vpaddr, conf->cache_slices);
   }
   if (vpaddr == 0xffffffffffffffff) {
-    printf("[!] Page map not supported. Can't verify set.\n");
+    printf(FAILURE_STATUS_PREFIX "Page map not supported. Can't verify set.\n");
     return;
   } else {
     if (!err) {
-      printf("[+] Verify eviction set (only in Linux with root):\n");
+      printf(SUCCESS_STATUS_PREFIX "Verify eviction set (only in Linux with root):\n");
       if (victim) {
         printf(" - victim pfn: 0x%llx, cache set: 0x%llx, slice: ", vpaddr,
                vcacheset);
@@ -111,9 +112,9 @@ void recheck(Elem *ptr, char *victim, bool err, struct config *conf) {
     }
   }
   if (verified && !err) {
-    printf("[+] Verified!\n");
+    printf(SUCCESS_STATUS_PREFIX "Verified!\n");
   } else {
-    printf("[-] Num. congruent addresses: %llu\n", num);
+    printf(QUESTION_STATUS_PREFIX "# congruent addresses = %llu != associativity\n", num);
   }
 }
 

@@ -2,6 +2,10 @@
 #include <math.h>
 #include <stdio.h>
 
+/*
+ * Increase the count of the slot with the value [val] by 1. Also
+ * filter out the outliers. I.e., (dict(hist))[val][count] += 1
+ */
 void hist_add(struct histogram *hist, int len, size_t val) {
   // remove outliers
   int j = val;
