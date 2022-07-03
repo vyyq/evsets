@@ -162,9 +162,9 @@ int find_evsets() {
 
   if (conf.flags & FLAG_CALIBRATE) {
     conf.threshold = calibrate(victim, &conf);
-    printf("[+] Calibrated Threshold = %d\n", conf.threshold);
+    printf(SUCCESS_STATUS_PREFIX "Calibrated Threshold = %d\n", conf.threshold);
   } else {
-    printf("[+] Default Threshold = %d\n", conf.threshold);
+    printf(SUCCESS_STATUS_PREFIX "Default Threshold = %d\n", conf.threshold);
   }
 
   if (conf.threshold < 0) {
@@ -210,8 +210,9 @@ pick:
   if (conf.flags & FLAG_DEBUG) {
     conf.flags |= FLAG_VERIFY;
     conf.flags &= ~(FLAG_FINDALLCOLORS | FLAG_FINDALLCONGRUENT);
-    printf("[+] Filter: %d congruent, %d non-congruent addresses\n", conf.con,
-           conf.noncon);
+    printf(SUCCESS_STATUS_PREFIX
+           "Filter: %d congruent, %d non-congruent addresses\n",
+           conf.con, conf.noncon);
     ret = filter(&ptr, victim, conf.con, conf.noncon, &conf);
     if (ret && (conf.flags & FLAG_RETRY)) {
       return 1;
@@ -250,6 +251,10 @@ pick:
     }
     return 1;
   }
+
+  printf(SUCCESS_STATUS_PREFIX
+         "Everything is fine so far. Press ANY key to start reducing...\n");
+  getchar();
 
   clock_t ts, te;
 

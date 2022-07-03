@@ -53,7 +53,7 @@ inline void maccess(void *p) {
 
 ul vtop(ul vaddr);
 ul ptos(ul paddr, ul slicebits);
-void recheck(Elem *ptr, char *victim, bool err, struct config *conf);
+void recheck(Elem *ptr, char *victim, bool err, const struct config *conf);
 int filter(Elem **ptr, char *vicitm, int n, int m, struct config *conf);
 
 #endif /* micro_H */

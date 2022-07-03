@@ -168,6 +168,9 @@ int gt_eviction(Elem **ptr, Elem **can, char *victim) {
   }
 
   int repeat = 0; // # backtracking which has already been done.
+  int trial_times = 0;
+  int retest_res;
+
   do {
     // Assign an index array and shuffle it
     for (i = 0; i < conf.cache_way + 1; i++) {
@@ -186,6 +189,7 @@ int gt_eviction(Elem **ptr, Elem **can, char *victim) {
 
       do {
         list_from_chunks(ptr, chunks, chunk_idxs[n], conf.cache_way + 1);
+      try_reduction_once_more:
         n++;
         if (conf.ratio > 0.0) {
           sublist_can_evict_victim =
@@ -212,7 +216,13 @@ int gt_eviction(Elem **ptr, Elem **can, char *victim) {
                  evset_size + nr_removed_lines);
         }
 
-        level++;              // go to the next lvl
+        trial_times = 0;
+        level++; // go to the next lvl
+      } else if (trial_times <= 2) {
+        trial_times++;
+        n = 0;
+        printf(QUESTION_STATUS_PREFIX "Try once more...\n");
+        goto try_reduction_once_more;
       } else if (level > 0) { // If not, recover to the last iteration
         list_concat(ptr, chunks[chunk_idxs[n - 1]]);
         level--;
@@ -230,17 +240,30 @@ int gt_eviction(Elem **ptr, Elem **can, char *victim) {
     goto stop_reduction;
 
   continue_backtracking:
-    if (conf.flags & FLAG_VERBOSE) {
-      printf("\t" FAILURE_STATUS_PREFIX
-             "Reduction failed. Backtracking... (Backtracking has already be "
-             "performed %d times; max toleration = %d)\n",
-             repeat, MAX_REPS_BACK);
-    }
+    printf(FAILURE_STATUS_PREFIX "Reduction failed. Retesting original set...\n");
+    retest_res =
+        tests_avg(*ptr, victim, conf.rounds, conf.threshold, conf.traverse);
 
+    if (conf.flags & FLAG_VERBOSE) {
+      if (retest_res == 0)
+        printf(FAILURE_STATUS_PREFIX
+               "The original larger set is not actually an eviction set\n");
+      else
+        printf(
+            "\t" FAILURE_STATUS_PREFIX
+            "Reduction failed. Backtracking towards level %d... (Backtracking "
+            "has already be "
+            "performed %d times; max toleration = %d)\n",
+            level, repeat, MAX_REPS_BACK);
+    }
+    if (retest_res == 0)
+      goto stop_reduction;
+    else
+      continue;
   } while (level > 0 && repeat++ < MAX_REPS_BACK &&
            (conf.flags & FLAG_BACKTRACKING));
 
- stop_reduction:
+stop_reduction:
   // recover discarded elements
   for (i = 0; i < h * 2; i++) {
     list_concat(can, backtrack_record[i]);

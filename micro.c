@@ -58,7 +58,7 @@ ul ptos(ul paddr, ul slices) {
   return ret;
 }
 
-void recheck(Elem *ptr, char *victim, bool err, struct config *conf) {
+void recheck(Elem *ptr, char *victim, bool err, const struct config *conf) {
   unsigned int cache_sets =
       conf->cache_size / LINE_SIZE / conf->cache_way / conf->cache_slices;
   ul vpaddr = 0, paddr = 0, vcacheset = 0, cacheset = 0, vslice = 0, slice = 0;
@@ -78,7 +78,8 @@ void recheck(Elem *ptr, char *victim, bool err, struct config *conf) {
     return;
   } else {
     if (!err) {
-      printf(SUCCESS_STATUS_PREFIX "Verify eviction set (only in Linux with root):\n");
+      printf(SUCCESS_STATUS_PREFIX
+             "Verify eviction set (only in Linux with root):\n");
       if (victim) {
         printf(" - victim pfn: 0x%llx, cache set: 0x%llx, slice: ", vpaddr,
                vcacheset);
@@ -114,7 +115,20 @@ void recheck(Elem *ptr, char *victim, bool err, struct config *conf) {
   if (verified && !err) {
     printf(SUCCESS_STATUS_PREFIX "Verified!\n");
   } else {
-    printf(QUESTION_STATUS_PREFIX "# congruent addresses = %llu != associativity\n", num);
+    printf(QUESTION_STATUS_PREFIX
+           "# congruent addresses = %llu != associativity\n",
+           num);
+    printf(QUESTION_STATUS_PREFIX
+           "Rechecking... Test if the set can evict the victim by timing...\n");
+    int evictable =
+        tests_avg(ptr, victim, conf->rounds, conf->threshold, conf->traverse);
+    if (evictable) {
+      printf(SUCCESS_STATUS_PREFIX
+             "It is still an eviction set which can evict the victim according "
+             "to the timing\n");
+    } else {
+      printf(FATAL_STATUS_PREFIX "This eviction set actually does not work\n");
+    }
   }
 }
 

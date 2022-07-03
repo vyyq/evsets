@@ -84,14 +84,16 @@ void list_split(Elem *ptr, Elem **chunks, int n) {
   if (!ptr) {
     return;
   }
-  int len = list_length(ptr), k = len / n, i = 0, j = 0;
+  int len = list_length(ptr);
+  int k = len / n;
+  int i = 0, j = 0;
   while (j < n) {
     i = 0;
     chunks[j] = ptr;
     if (ptr) {
       ptr->prev = NULL;
     }
-    while (ptr != NULL && ((++i < k) || (j == n - 1))) {
+    while (ptr && ((++i < k) || (j == n - 1))) {
       ptr = ptr->next;
     }
     if (ptr) {
