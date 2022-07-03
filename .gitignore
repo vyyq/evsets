@@ -4,3 +4,4 @@ evsets
 compile_commands.json
 .cache/
 *.~undo-tree~
+.emacs.desktop
